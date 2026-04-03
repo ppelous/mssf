@@ -1,6 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mycological Society of San Francisco</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --sidebar-w: 260px;
+    --bg: #f5f2ec;
+    --sidebar-bg: #1c1917;
+    --sidebar-border: #2e2a27;
+    --text: #f0ebe3;
+    --muted: #7a736c;
+    --accent: #f97316;
+    --accent-soft: rgba(249,115,22,0.12);
+    --item-hover: #28231f;
+    --sub-bg: #141210;
+    --radius: 8px;
+    --transition: 0.22s ease;
+  }
 
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    display: flex;
+    min-height: 100vh;
+  }
 
+  /* ── OVERLAY (mobile) ─────────────────────────── */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  .overlay.active { display: block; }
 
+  /* ── SIDEBAR ──────────────────────────────────── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--sidebar-border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    transition: transform var(--transition);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
 
+  /* ── LOGO ─────────────────────────────────────── */
+  .sidebar-logo {
+    padding: 1.5rem 1.2rem 1rem;
+    border-bottom: 1px solid var(--sidebar-border);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-mark svg { width: 18px; height: 18px; fill: white; }
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.03em;
+  }
+  .logo-text span { color: var(--accent); }
+
+  /* ── NAV SECTION LABELS ───────────────────────── */
+  .nav-section {
+    padding: 1.2rem 0 0.3rem;
+  }
+  .nav-label {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0 1.2rem 0.5rem;
+    display: block;
+  }
+
+  /* ── NAV LIST ─────────────────────────────────── */
+  .nav-list {
+    list-style: none;
+    padding: 0 0.6rem;
+  }
+
+  .nav-item { position: relative; }
+
+  /* top-level links & buttons */
+  .nav-item > a,
+  .nav-item > button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    color: #b0a89e;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: background var(--transition), color var(--transition);
+    text-align: left;
+  }
+
+  .nav-item > a:hover,
+  .nav-item > button:hover,
+  .nav-item.open > button {
+    background: var(--item-hover);
+    color: var(--text);
+  }
+
+  .nav-item > a.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* icon */
+  .nav-icon {
+    width: 18px; height: 18px;
+    flex-shrink: 0;
+    opacity: 0.6;
+    transition: opacity var(--transition);
+  }
+  .nav-item > a:hover .nav-icon,
+  .nav-item > button:hover .nav-icon,
+  .nav-item.open > button .nav-icon,
+  .nav-item > a.active .nav-icon { opacity: 1; }
+
+  /* label grows */
+  .nav-item > a span,
+  .nav-item > button .nav-btn-label { flex: 1; }
+
+  /* chevron */
+  .chevron {
+    width: 14px; height: 14px;
+    stroke: currentColor; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    transition: transform 0.25s;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .nav-item.open > button .chevron { transform: rotate(180deg); }
+
+  /* badge */
+  .badge {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.6rem;
+    background: var(--accent);
+    color: white;
+    border-radius: 20px;
+    padding: 0.1em 0.5em;
+    margin-left: auto;
+    margin-right: 4px;
+  }
+
+  /* ── SUBMENU ──────────────────────────────────── */
+  .submenu {
+    list-style: none;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, opacity 0.25s;
+    opacity: 0;
+    padding: 0 0 0 1rem;
+  }
+
+  .nav-item.open > .submenu {
+    max-height: 500px;
+    opacity: 1;
+  }
+
+  .submenu li a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.8rem 0.45rem 1rem;
+    font-size: 0.84rem;
+    font-weight: 400;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: var(--radius);
+    border-left: 2px solid var(--sidebar-border);
+    margin: 0.1rem 0;
+    transition: color var(--transition), border-color var(--transition), background var(--transition);
+    position: relative;
+  }
+
+  .submenu li a:hover {
+    color: var(--text);
+    border-left-color: var(--accent);
+    background: var(--item-hover);
+  }
+
+  .submenu li a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* ── SIDEBAR FOOTER ───────────────────────────── */
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 1rem 0.6rem;
+    border-top: 1px solid var(--sidebar-border);
+  }
+  .user-card {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    color: #ffffff;
+    transition: background var(--transition);
+  }
+  .user-card:hover { background: var(--item-hover); }
+  .avatar {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #f97316, #fb923c);
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; color: white;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 0.85rem; font-weight: 600; color: var(--text); line-height: 1.2; }
+  .user-role { font-size: 0.72rem; color: var(--muted); font-family: 'Fira Code', monospace; }
+
+  /* ── MAIN CONTENT ─────────────────────────────── */
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP BAR ──────────────────────────────────── */
+  .topbar {
+    max-width: 740px;
+    height: 70px;
+    background: #f97316;
+    border-bottom: 1px solid #e5e0d8;
+    display: flex;
+    align-items: center;
+    padding: 0 2rem;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #555;
+  }
+
+  .topbar-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .topbar-breadcrumb {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    color: #ffffff;
+    margin-left: 0.5rem;
+  }
+  
+  .topbar-logo {
+	max-height: 90%;
+	padding-left: 6%;
+	padding-top: 5%;
+	float: left;
+	background-color: #FFFFFF;	
+  }
+
+  /* ── PAGE CONTENT ─────────────────────────────── */
+  .content {
+    padding: 3rem 2.5rem;
+    flex: 1;
+  }
+  .content h1 {
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    font-weight: 700;
+    padding-bottom: 1%;
+    color: #1c1917;
+    margin-bottom: 0.75rem;
+  }
+  .content h1 em { color: var(--accent); font-style: normal; }
+  .content p {
+    color: #6b6560;
+    text-align: justify;
+    text-justify: inter-word;
+    font-size: 1rem;
+    line-height: 1.75;
+    max-width: 700px;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2.5rem;
+    margin-left: 2rem;
+  }
+  .card {
+    background: white;
+    border: 1px solid #e5e0d8;
+    border-radius: 12px;
+    padding: 1.4rem 1.2rem;
+  }
+  .card-label {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .card-label.accent { color: var(--accent); }
+  
+  .card-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1c1917;
+    line-height: 1;
+  }
+  .card-value.accent { color: var(--accent); }
+
+  /* ── RESPONSIVE ───────────────────────────────── */
+  @media (max-width: 768px) {
+    .sidebar {
+      transform: translateX(-100%);
+    }
+    .sidebar.open {
+      transform: translateX(0);
+      box-shadow: 4px 0 32px rgba(0,0,0,0.4);
+    }
+    .main { margin-left: 0; }
+    .menu-toggle { display: flex; }
+    .content { padding: 2rem 1.2rem; }
+    .topbar { padding: 0 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar" id="sidebar">
+
+  <div class="sidebar-logo">
+<!--    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+-->
+    <span><img src="images/MSSF-Logo.jpg" alt="MSSF Logo" /><span></span></span>
+  </div>
+
+  <nav>
+
+    <!-- MAIN -->
+    <div class="nav-section">
+      <span class="nav-label">Main</span>
+      <ul class="nav-list">
+        <li class="nav-item">
+          <a href="https://mssf.org/calendar/index.php" class="active">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Calendar</span>
+          </a>
+        </li>
+
+        <!-- Membership submenu -->
+        <li class="nav-item" id="item-products">
+          <button aria-expanded="false">
+             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span class="nav-btn-label">Membership</span>
+            <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="submenu">
+            <li><a href="https://mssf.org/membership/index.html">About</a></li>
+            <li><a href="https://mssf.org/membership/join.html" class="active">Join</a></li>
+            <li><a href="https://mssf.org/membership/renew.html">Renew</a></li>
+          </ul>
+        </li>
+		<!-- Meetings submenu -->
+        <li class="nav-item" id="item-products">
+          <button aria-expanded="false">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            <span class="nav-btn-label">Meetings</span>
+            <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="submenu">
+            <li><a href="https://mssf.org/meetings/index.html">Info & Schedule</a></li>
+            <li><a href="https://mssf.org/meetings/randall.html">Map & Directions</a></li>
+          </ul>
+        </li>
+        
+        <!-- Mycena News submenu -->
+        <li class="nav-item" id="item-products">
+          <button aria-expanded="false">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            <span class="nav-btn-label">Mycena News</span>
+            <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="submenu">
+            <li><a href="https://mssf.org/mycena-news/index.html">About the Mycena News</a></li>
+            <li><a href="https://mssf.org/secure/current-issue.pdf">Current Issue (Members only)</a></li>
+            <li><a href="https://mssf.org/mycena-news/issues.html">Past Issues</a></li>
+          </ul>
+        </li>
+        
+        <!-- Fungus Fairs submenu -->
+        <li class="nav-item" id="item-products">
+          <button aria-expanded="false">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            <span class="nav-btn-label">Fungus Fairs</span>
+            <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="submenu">
+            <li><a href="https://mssf.org/fungus-fairs/index.html">Info</a></li>
+            <li><a href="https://mssf.org/fungus-fairs/fair-species.html">Species Lists</a></li>
+            <li><a href="https://mssf.org/fungus-fairs/fair-posters.html">Posters</a></li>
+          </ul>
+        </li>  
+        
+        <li class="nav-item">
+          <a href="https://mssf.org/forays/index.html">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Forays</span>
+          </a>
+        </li>  
+        
+        <li class="nav-item">
+          <a href="https://mssf.org/photos/photos01/index.php">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Photos</span>
+          </a>
+        </li>  
+        
+      <!-- Culinary submenu -->
+        <li class="nav-item" id="item-products">
+          <button aria-expanded="false">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            <span class="nav-btn-label">Culinary</span>
+            <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="submenu">
+            <li><a href="https://www.mssf.org/culinary/index.html">Culinary Group</a></li>
+            <li><a href="https://mssf.org/cookbook/index.html">Cookbook</a></li>
+          </ul>
+        </li>  
+
+        <li class="nav-item">
+          <a href="https://mssf.org/education.html">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Education</span>
+          </a>
+        </li>  
+        
+        <li class="nav-item">
+          <a href="https://mssf.org/cultivation.html">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Cultivation</span>
+          </a>
+        </li> 
+        
+        <li class="nav-item">
+          <a href="https://www.mssf.org/identification.html">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Identification</span>
+          </a>
+        </li> 
+         
+         <li class="nav-item">
+          <a href="https://mssf.org/committee/toxicology.html">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Toxicology</span>
+          </a>
+        </li> 
+        
+                <!-- Miscellanea submenu -->
+        <li class="nav-item" id="item-products">
+          <button aria-expanded="false">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            <span class="nav-btn-label">Miscellanea</span>
+            <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="submenu">
+            <li><a href="https://www.mssf.org/committee/library.html">History</a></li>
+            <li><a href="https://www.mssf.org/Sommer/index.html">Mushroom Watercolors</a></li>
+            <li><a href="https://www.mssf.org/links.html">Links</a></li>
+          </ul>
+        </li> 
+            
+      </ul>
+    </div>
+
+    <!-- MEMBERS -->
+    <div class="nav-section">
+      <span class="nav-label">Members</span>
+      <ul class="nav-list">
+
+        <!-- Members submenu -->
+        <li class="nav-item">
+          <a href="https://www.mssf.org/committee/library.html">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Library</span>
+          </a>
+        </li> 
+                <li class="nav-item">
+          <a href="https://www.mssf.org/secure/current-issue.pdf">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Latest Mycena News</span>
+          </a>
+        </li> 
+        
+                        <li class="nav-item">
+          <a href="https://www.mssf.org/members/index.html">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>Login for Members</span>
+          </a>
+        </li> 
+         
+    </div>
+
+      </ul>
+    </div>
+
+<!--        <li class="nav-item">
+          <a href="#">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Logout</span>
+          </a>
+        </li>
+-->
+      </ul>
+      
+    </div>
+
+  </nav>
+
+  <div class="sidebar-footer">
+    <div>
+	  <h2>Upcoming Events</h2>
+	  <p><br>
+      <h3>Next General Meeting</h3>
+      <p><br>
+      <b>March 17th 2026, 7:30 PM </b><br/>
+      <br>
+      Guest Speaker-<br/>
+      <b>Olga Tzogas</b><br>
+      <br />
+      Talk Title-<br />
+      <b><i> Mushrooms + Culture of Greece</i></b>
+      <p>
+      In-person at the Randall Museum for ID and social time (starting at 6:30).
+      <br/><a href="/meetings/">more information</a>
+      <br/>The meeting will also be accessible virtually:<br/>
+      <a href="https://us02web.zoom.us/j/89184389640?pwd=N2x0V25JNkZaRHZoQ3VBVGJyYURuZz09" target="_blank">Join the Zoom Meeting</a>	
+      </p>
+      <p>
+      <p>
+      <h3>Next Culinary Dinner</h3>
+      <br>
+      <b>February 2nd 2026, 5:30 PM </b><br/>
+      Theme: <b>"Big Roast Pig"</b><br>
+      Details: <a href="https://mms.mssf.org/Calendar/moreinfo.php?eventid=195909">Calendar event</a><br>
+      <!-- Registration: <a href="https://mms.mssf.org/members/evr/addcontact.php?evid=60618211&mem_id=297913503&md=MA">Members Only</a> -->
+      <br>
+      </b> 
+      </p>
+      <hr>
+	  <P>
+	  <a href="http://www.calpoison.org/">
+	  <img src="images/redcross.jpg"><br/></a>
+	  <br/><b>In Case of Poisoning:</b><br/>
+	  <a href="http://www.calpoison.org/">
+	  USA Poison Control Center<br/>
+	  1-800-222-1222</a>
+	  </p>
+	  <hr>
+<!-- 
+<h1>Donate to the MSSF!</h1>
+ -->
+      <h2> MSSF on Social Media </h2>
+	  <p><b> Follow us on Instagram</b></p>
+      <a href="https://www.instagram.com/myco_sf/"><image src="./images/2227.jpg" alt="Instagram" width="30" height="30" /></a>
+	  <br/>
+	  <p><b> Like us on Facebook</b></p>
+	  <div class="fb-like" data-href="https://www.facebook.com/pages/Mycological-Society-of-San-Francisco/207808605900376" data-send="false" data-layout="button_count" data-width="120" data-show-faces="false" data-font="arial"></div>
+	  <br/>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7a736c" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <header class="topbar">
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="topbar-title">Mycological Society of San Francisco</span>
+    <span class="topbar-breadcrumb"> A World of Wonder at your Feet</span>
+  </header>
+  
+<div class="cards">
+      <div class="card">
+        <div class="card-label accent">Next General Meeting</div>
+        <div class="card-value">04/21/2026</div>
+      </div>
+      <div class="card">
+        <div class="card-label accent">Next Culinary Dinner</div>
+        <div class="card-value">04/06/2026</div>
+      </div>
+<!--      <div class="card">
+        <div class="card-label accent"> After Dark: Wondrous Fungus</div>
+        <div class="card-value">03/05/2026</div>
+      </div>
+-->
+ <!--     <div class="card">
+        <div class="card-label">Pending</div>
+        <div class="card-value accent">12</div>
+      </div>
+-->
+    </div>
+
+  <div class="content">
+    <h1><em>Mycological Society of San Francisco</em></h1>
+    
 <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSd25177ErpTOy7sn12XHlykckoz51vjL8btFnYjqrH8IzQZRA/viewform?embedded=true" width="640" height="1531" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
+
+  </div>
+</div>
+
+<script>
+  // Submenu toggles
+  document.querySelectorAll('.nav-item > button[aria-expanded]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const li = btn.closest('.nav-item');
+      const isOpen = li.classList.contains('open');
+
+      // Close other open items
+      document.querySelectorAll('.nav-item.open').forEach(other => {
+        if (other !== li) {
+          other.classList.remove('open');
+          other.querySelector('button[aria-expanded]')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      li.classList.toggle('open', !isOpen);
+      btn.setAttribute('aria-expanded', !isOpen);
+    });
+  });
+
+  // Mobile drawer
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('overlay');
+  const toggle   = document.getElementById('menuToggle');
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  toggle.addEventListener('click', openSidebar);
+  overlay.addEventListener('click', closeSidebar);
+
+  // Close drawer on resize to desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeSidebar();
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeSidebar();
+  });
+</script>
+</body>
+</html>
+
+
+
